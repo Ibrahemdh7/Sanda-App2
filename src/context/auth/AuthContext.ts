@@ -1,3 +1,4 @@
+// src/context/auth/AuthContext.ts
 import { createContext } from 'react';
 import { User } from '@/types';
 
@@ -12,4 +13,17 @@ export interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Create a proper default context value that matches your interface
+const defaultContextValue: AuthContextType = {
+  user: null,
+  loading: false,
+  error: null,
+  isAuthenticated: false,
+  login: async () => { throw new Error('Not implemented') },
+  register: async () => { throw new Error('Not implemented') },
+  logout: async () => { throw new Error('Not implemented') },
+  resetPassword: async () => { throw new Error('Not implemented') }
+};
+
+// Create context with the default value
+export const AuthContext = createContext<AuthContextType>(defaultContextValue);
