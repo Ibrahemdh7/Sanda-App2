@@ -1,11 +1,17 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 // Auth Stack Types
 export type AuthStackParamList = {
+  Welcome: undefined;
+  SignIn: undefined;
+  SignUp: undefined;
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
 };
+
+export type AuthNavigationProp = NativeStackNavigationProp<AuthStackParamList>;
 
 // Admin Stack Types
 export type AdminStackParamList = {
