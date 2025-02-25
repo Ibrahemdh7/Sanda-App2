@@ -1,14 +1,13 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { theme } from '../../../theme/theme';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, StyleProp, ViewStyle } from 'react-native';
+import { theme } from '@/theme/theme';
 
-interface CustomButtonProps {
+export interface CustomButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
-  style?: ViewStyle;
-  textStyle?: TextStyle;
-  disabled?: boolean;
+  variant: 'primary' | 'secondary' | 'outline' | 'text';
+  style?: StyleProp<ViewStyle>;
+  loading?: boolean;
 }
 
 export const CustomButton: React.FC<CustomButtonProps> = ({
@@ -16,81 +15,61 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
   onPress,
   variant = 'primary',
   style,
-  textStyle,
-  disabled = false
+  loading
 }) => {
-  const buttonStyles = [
-    styles.button,
-    variant === 'primary' && styles.primaryButton,
-    variant === 'secondary' && styles.secondaryButton,
-    variant === 'outline' && styles.outlineButton,
-    disabled && styles.disabledButton,
-    style
-  ];
-
-  const textStyles = [
-    styles.text,
-    variant === 'outline' && styles.outlineText,
-    disabled && styles.disabledText,
-    textStyle
-  ];
-
   return (
-    <TouchableOpacity 
-      style={buttonStyles} 
+    <TouchableOpacity
       onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.7}
+      disabled={loading}
+      style={[styles.button, styles[variant], style]}
     >
-      <Text style={textStyles}>{title}</Text>
+      {loading ? (
+        <ActivityIndicator color={variant === 'primary' ? 'white' : theme.colors.primary} />
+      ) : (
+        <Text style={[styles.buttonText, styles[`${variant}Text`]]}>
+          {title}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.xl,
-    borderRadius: theme.borderRadius.md,
+    padding: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 200,
-    marginVertical: theme.spacing.sm,
-    elevation: 2,
-    shadowColor: theme.colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4
   },
-  primaryButton: {
-    backgroundColor: theme.colors.primary
+  primary: {
+    backgroundColor: theme.colors.primary,
   },
-  secondaryButton: {
-    backgroundColor: theme.colors.secondary
+  secondary: {
+    backgroundColor: theme.colors.secondary,
   },
-  outlineButton: {
+  outline: {
     backgroundColor: 'transparent',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: theme.colors.primary,
-    elevation: 0,
-    shadowColor: 'transparent'
-  },
-  disabledButton: {
-    backgroundColor: theme.colors.border,
-    borderColor: theme.colors.border,
-    elevation: 0,
-    shadowColor: 'transparent'
   },
   text: {
-    color: theme.colors.background,
-    fontSize: theme.typography.button.fontSize,
-    fontWeight: theme.typography.button.fontWeight ,
-    textAlign: 'center' as const
+    backgroundColor: 'transparent',
+    padding: 8,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  primaryText: {
+    color: 'white',
+  },
+  secondaryText: {
+    color: 'white',
   },
   outlineText: {
-    color: theme.colors.primary
+    color: theme.colors.primary,
   },
-  disabledText: {
-    color: theme.colors.textSecondary
-  }
+  textText: {
+    color: theme.colors.primary,
+  },
 });
