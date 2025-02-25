@@ -1,21 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, Button, StyleSheet, TextInput, TouchableOpacity, TextStyle } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, TextStyle, Alert } from 'react-native';
 import { ScreenWrapper } from '../../../shared/components/layouts/ScreenWrapper';
 import { useNavigation } from '@react-navigation/native';
 import { AuthNavigationProp } from '../../../navigation/types';
 import { CustomButton } from '../../../shared/components/Button/CustomButton';
 import { theme } from '../../../theme/theme';
+import { useAuth } from '../../../hooks/useAuth';
 
 export const SignInScreen: React.FC = () => {
   const navigation = useNavigation<AuthNavigationProp>();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  const handleSignIn = () => {
-    // Implement sign in logic
-    console.log('Sign in:', { email, password });
+  const [isLoading, setIsLoading] = useState(false);
+  const handleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      await login(email, password);
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Sign in failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
-
   return (
     <ScreenWrapper>
       <View style={styles.container}>

@@ -2,19 +2,20 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TextStyle } from 'react-native';
 import { ScreenWrapper } from '../../../shared/components/layouts/ScreenWrapper';
 import { useNavigation } from '@react-navigation/native';
-import { AuthNavigationProp } from '../../../navigation/types';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/types';
 import { CustomButton } from '../../../shared/components/Button/CustomButton';
 import { theme } from '../../../theme/theme';
 
 export const WelcomeScreen: React.FC = () => {
-  const navigation = useNavigation<AuthNavigationProp>();
-
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   return (
     <ScreenWrapper>
       <View style={styles.container}>
         <View style={styles.header}>
           <Image 
             style={styles.logo}
+            source={require('../../../../assets/splash-icon.png')}
             resizeMode="contain"
           />
           <Text style={styles.title as TextStyle}>Welcome to Sanad</Text>
@@ -24,13 +25,13 @@ export const WelcomeScreen: React.FC = () => {
         <View style={styles.buttonContainer}>
           <CustomButton 
             title="Sign In" 
-            onPress={() => navigation.navigate('SignIn')}
+            onPress={() => navigation.navigate('Auth', { screen: 'SignIn' })}
             variant="primary"
           />
           <CustomButton 
             title="Sign Up" 
-            onPress={() => navigation.navigate('SignUp')}
-            variant="outline"
+            onPress={() => navigation.navigate('Auth', { screen: 'SignUp' })}
+            variant="secondary"
           />
         </View>
       </View>

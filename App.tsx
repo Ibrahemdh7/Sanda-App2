@@ -10,12 +10,12 @@ import { ClientStack } from './src/navigation/ClientStack';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { theme } from './src/theme/theme';
-import { AuthProvider } from './src/context/auth/AuthProvider'; // Import your AuthProvider
-import { useAuth } from './src/hooks/useAuth'; // Import useAuth
+import { AuthProvider } from './src/context/auth/AuthProvider';
+import { useAuth } from './src/hooks/useAuth';
+import { WelcomeScreen } from './src/features/auth/screens/WelcomeScreen';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
-// Create a component that uses the auth context
 function AppContent() {
   const { isAuthenticated, user, loading } = useAuth();
   
@@ -48,7 +48,17 @@ function AppContent() {
           contentStyle: { backgroundColor: theme.colors.background },
           animation: 'slide_from_right',
         }}
+        initialRouteName="Welcome"
       >
+        <RootStack.Screen 
+          name="Welcome" 
+          component={WelcomeScreen}
+          options={{
+            gestureEnabled: false,
+            animation: 'fade',
+          }}
+        />
+        
         {!isAuthenticated ? (
           <RootStack.Screen 
             name="Auth" 

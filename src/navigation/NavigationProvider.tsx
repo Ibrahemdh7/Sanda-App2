@@ -7,6 +7,8 @@ import { AdminStack } from './AdminStack';
 import { ProviderStack } from './ProviderStack';
 import { ClientStack } from './ClientStack';
 import { theme } from '@theme/theme';
+import { BottomTabs } from './BottomTabs';
+import { WelcomeScreen } from '@/features/auth/screens/WelcomeScreen';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
@@ -34,14 +36,18 @@ export const NavigationProvider: React.FC<{ isAuthenticated: boolean; userRole?:
           contentStyle: { backgroundColor: theme.colors.background },
           animation: 'fade',
         }}
+        initialRouteName="Welcome"
       >
         {!isAuthenticated ? (
-          <RootStack.Screen name="Auth" component={AuthStack} />
+          <>
+            <RootStack.Screen name="Welcome" component={WelcomeScreen} />
+            <RootStack.Screen name="Auth" component={AuthStack} />
+          </>
         ) : (
           <>
-            {userRole === 'admin' && <RootStack.Screen name="Admin" component={AdminStack} />}
-            {userRole === 'provider' && <RootStack.Screen name="Provider" component={ProviderStack} />}
-            {userRole === 'client' && <RootStack.Screen name="Client" component={ClientStack} />}
+            {userRole === 'admin' && <RootStack.Screen name="Admin" component={BottomTabs} />}
+            {userRole === 'provider' && <RootStack.Screen name="Provider" component={BottomTabs} />}
+            {userRole === 'client' && <RootStack.Screen name="Client" component={BottomTabs} />}
           </>
         )}
       </RootStack.Navigator>

@@ -1,132 +1,96 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, TextStyle, Alert } from 'react-native';
+import { ScreenWrapper } from '../../../shared/components/layouts/ScreenWrapper';
 import { useNavigation } from '@react-navigation/native';
-import { AuthNavigationProp } from '@/navigation/types';
-import { useAuth } from '@/hooks/useAuth';
-import { FormInput } from '@/shared/components/forms/FormInput';
-import { CustomButton } from '@/shared/components/Button/CustomButton';
-import { ScreenWrapper } from '@/shared/components/layouts/ScreenWrapper';
-import { Text } from '@/shared/components/Text';
-import { theme } from '@/theme/theme';
-import { Formik } from 'formik';
-import * as Yup from 'yup';
+import { AuthNavigationProp } from '../../../navigation/types';
+import { CustomButton } from '../../../shared/components/Button/CustomButton';
+import { theme } from '../../../theme/theme';
+import { useAuth } from '../../../hooks/useAuth';
+import { Picker } from '@react-native-picker/picker';
+import { User } from '../../../types';
 
-interface SignUpFormValues {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  displayName: string;
-  role: 'provider' | 'client';
-}
-
-const validationSchema = Yup.object().shape({
-  email: Yup.string().email('Invalid email').required('Email is required'),
-  password: Yup.string()
-    .min(8, 'Password must be at least 8 characters')
-    .required('Password is required'),
-  confirmPassword: Yup.string()
-    .oneOf([Yup.ref('password')], 'Passwords must match')
-    .required('Confirm password is required'),
-  displayName: Yup.string().required('Full name is required'),
-  role: Yup.string().oneOf(['provider', 'client']).required('Role is required')
-});
-
-export const SignUpScreen = () => {
+export const SignUpScreen: React.FC = () => {
   const navigation = useNavigation<AuthNavigationProp>();
   const { register } = useAuth();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [role, setRole] = useState<User['role']>('client');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignUp = async (values: any) => {
+  const handleSignUp = async () => {
     try {
-      setServerError(null);
-      await register(values.email, values.password, {
-        displayName: values.displayName,
-        role: values.role
+      setIsLoading(true);
+      await register(email, password, {
+        displayName,
+        role
       });
       navigation.navigate('SignIn');
     } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'Registration failed');
+      Alert.alert('Error', error instanceof Error ? error.message : 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <ScreenWrapper>
-      <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.container}>
         <View style={styles.header}>
-          <Text variant="h1" style={styles.title}>Create Account</Text>
-          <Text variant="body" style={styles.subtitle}>
-            Join Sanad to manage your business finances
-          </Text>
+          <Text style={styles.title as TextStyle}>Create Account</Text>
+          <Text style={styles.subtitle}>Join Sanad today</Text>
         </View>
 
-        <Formik
-          initialValues={{
-            email: '',
-            password: '',
-            confirmPassword: '',
-            displayName: '',
-            role: 'client'
-          }}
-          validationSchema={validationSchema}
-          onSubmit={handleSignUp}
-        >
-          {({ handleChange, handleSubmit, values, errors, touched, isSubmitting }) => (
-            <View style={styles.form}>
-              <FormInput
-                label="Full Name"
-                value={values.displayName}
-                onChangeText={handleChange('displayName')}
-                error={touched.displayName ? errors.displayName : undefined}
-                autoCapitalize="words"
-              />
+        <View style={styles.form}>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Full Name"
+            value={displayName}
+            onChangeText={setDisplayName}
+          />
+          <TextInput
+            style={styles.textInput}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.textInput}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={role}
+              onValueChange={(itemValue: User['role']) => setRole(itemValue)}
+              style={styles.picker}
+            >
+              <Picker.Item label="Client" value="client" />
+              <Picker.Item label="Provider" value="provider" />
+              <Picker.Item label="Admin" value="admin" />
+            </Picker>
+          </View>
 
-              <FormInput
-                label="Email"
-                value={values.email}
-                onChangeText={handleChange('email')}
-                error={touched.email ? errors.email : undefined}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
+          <CustomButton 
+            title="Sign Up" 
+            onPress={handleSignUp}
+            variant="primary"
+            loading={isLoading}
+          />
+        </View>
 
-              <FormInput
-                label="Password"
-                value={values.password}
-                onChangeText={handleChange('password')}
-                error={touched.password ? errors.password : undefined}
-                secureTextEntry
-              />
-
-              <FormInput
-                label="Confirm Password"
-                value={values.confirmPassword}
-                onChangeText={handleChange('confirmPassword')}
-                error={touched.confirmPassword ? errors.confirmPassword : undefined}
-                secureTextEntry
-              />
-
-              {serverError && (
-                <Text style={styles.errorText}>{serverError}</Text>
-              )}
-
-              <CustomButton
-                title="Sign Up"
-                onPress={handleSubmit}
-                loading={isSubmitting}
-                variant="primary"
-                style={styles.button}
-              />
-
-              <CustomButton
-                title="Already have an account? Sign In"
-                onPress={() => navigation.navigate('SignIn')}
-                variant="text"
-                style={styles.linkButton}
-              />
-            </View>
-          )}
-        </Formik>
-      </ScrollView>
+        <View style={styles.footerContainer}>
+          <Text style={styles.footerText}>Already have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
+            <Text style={styles.footerLink}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </ScreenWrapper>
   );
 };
@@ -149,6 +113,13 @@ const styles = StyleSheet.create({
   form: {
     gap: theme.spacing.lg
   },
+  textInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    fontSize: 16
+  },
   button: {
     marginTop: theme.spacing.lg
   },
@@ -158,5 +129,27 @@ const styles = StyleSheet.create({
   errorText: {
     color: theme.colors.error,
     textAlign: 'center'
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.md,
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+  },
+  footerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: theme.spacing.xl
+  },
+  footerText: {
+    color: theme.colors.textSecondary
+  },
+  footerLink: {
+    color: theme.colors.primary,
+    fontWeight: 'bold'
   }
 });

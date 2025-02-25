@@ -47,6 +47,7 @@ export type SharedStackParamList = {
 
 // Root Stack Types
 export type RootStackParamList = {
+  Welcome: undefined;
   Auth: NavigatorScreenParams<AuthStackParamList>;
   Admin: NavigatorScreenParams<AdminStackParamList>;
   Provider: NavigatorScreenParams<ProviderStackParamList>;
