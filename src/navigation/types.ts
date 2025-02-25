@@ -49,10 +49,9 @@ export type SharedStackParamList = {
 export type RootStackParamList = {
   Welcome: undefined;
   Auth: NavigatorScreenParams<AuthStackParamList>;
-  Admin: NavigatorScreenParams<AdminStackParamList>;
-  Provider: NavigatorScreenParams<ProviderStackParamList>;
-  Client: NavigatorScreenParams<ClientStackParamList>;
-  Shared: NavigatorScreenParams<SharedStackParamList>;
+  Admin: undefined;
+  Provider: undefined;
+  Client: undefined;
 };
 
 declare global {

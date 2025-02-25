@@ -1,3 +1,4 @@
+// App.tsx
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -46,62 +47,14 @@ function AppContent() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: theme.colors.background },
-          animation: 'slide_from_right',
         }}
         initialRouteName="Welcome"
       >
-        <RootStack.Screen 
-          name="Welcome" 
-          component={WelcomeScreen}
-          options={{
-            gestureEnabled: false,
-            animation: 'fade',
-          }}
-        />
-        
-        {!isAuthenticated ? (
-          <RootStack.Screen 
-            name="Auth" 
-            component={AuthStack}
-            options={{
-              gestureEnabled: false,
-              animation: 'fade',
-            }}
-          />
-        ) : (
-          <>
-            {user?.role === 'provider' && (
-              <RootStack.Screen 
-                name="Provider" 
-                component={ProviderStack}
-                options={{
-                  gestureEnabled: false,
-                  animation: 'fade',
-                }}
-              />
-            )}
-            {user?.role === 'admin' && (
-              <RootStack.Screen 
-                name="Admin" 
-                component={AdminStack}
-                options={{
-                  gestureEnabled: false,
-                  animation: 'fade',
-                }}
-              />
-            )}
-            {user?.role === 'client' && (
-              <RootStack.Screen 
-                name="Client" 
-                component={ClientStack}
-                options={{
-                  gestureEnabled: false,
-                  animation: 'fade',
-                }}
-              />
-            )}
-          </>
-        )}
+        <RootStack.Screen name="Welcome" component={WelcomeScreen} />
+        <RootStack.Screen name="Auth" component={AuthStack} />
+        <RootStack.Screen name="Admin" component={AdminStack} />
+        <RootStack.Screen name="Provider" component={ProviderStack} />
+        <RootStack.Screen name="Client" component={ClientStack} />
       </RootStack.Navigator>
     </NavigationContainer>
   );

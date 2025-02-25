@@ -1,40 +1,70 @@
 import React, { useState, useEffect } from 'react';
 import { AuthContext, AuthContextType } from './AuthContext';
 import { User } from '@/types';
-import { firebaseAuth } from '@/services/firebase/auth';
-import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/config/firebase';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '@/navigation/types';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        if (firebaseUser) {
-          const userData = await firebaseAuth.getCurrentUser();
-          setUser(userData);
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Authentication error');
-      } finally {
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // For demo/presentation purposes only
+  const demoUsers = {
+    admin: {
+      id: 'admin-1',
+      email: 'admin@sanad.com',
+      role: 'admin',
+      displayName: 'Admin User',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    provider: {
+      id: 'provider-1',
+      email: 'provider@sanad.com',
+      role: 'provider',
+      displayName: 'Provider User',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    },
+    client: {
+      id: 'client-1', 
+      email: 'client@sanad.com',
+      role: 'client',
+      displayName: 'Client User',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+  };
 
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const userData = await firebaseAuth.login(email, password);
-      setUser(userData);
       setError(null);
+      
+      // For presentation - detect which type of user based on email
+      if (email === 'admin@sanad.com') {
+        setUser(demoUsers.admin as User);
+        setIsAuthenticated(true);
+      } else if (email === 'provider@sanad.com') {
+        setUser(demoUsers.provider as User);
+        setIsAuthenticated(true);
+      } else if (email === 'client@sanad.com') {
+        setUser(demoUsers.client as User);
+        setIsAuthenticated(true);
+      } else {
+        // Default to client for any email
+        const customUser = {
+          ...demoUsers.client,
+          email: email,
+          displayName: email.split('@')[0] // Use part of email as name
+        };
+        setUser(customUser as User);
+        setIsAuthenticated(true);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       throw err;
@@ -46,9 +76,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, password: string, userData: Partial<User>) => {
     try {
       setLoading(true);
-      const newUser = await firebaseAuth.register(email, password, userData);
-      setUser(newUser);
       setError(null);
+      
+      // Create a new demo user
+      const newUser = {
+        id: `${userData.role}-${Date.now()}`,
+        email: email,
+        role: userData.role || 'client',
+        displayName: userData.displayName || email.split('@')[0],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setUser(newUser as User);
+      setIsAuthenticated(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
       throw err;
@@ -60,8 +100,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       setLoading(true);
-      await firebaseAuth.logout();
       setUser(null);
+      setIsAuthenticated(false);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Logout failed');
@@ -74,8 +114,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = async (email: string) => {
     try {
       setLoading(true);
-      await firebaseAuth.resetPassword(email);
+      // Just pretend we sent an email
       setError(null);
+      alert(`Password reset email sent to ${email}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Password reset failed');
       throw err;
@@ -88,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     loading,
     error,
-    isAuthenticated: !!user,
+    isAuthenticated,
     login,
     register,
     logout,

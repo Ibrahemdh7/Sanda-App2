@@ -2,15 +2,18 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, TextStyle, Alert } from 'react-native';
 import { ScreenWrapper } from '../../../shared/components/layouts/ScreenWrapper';
 import { useNavigation } from '@react-navigation/native';
-import { AuthNavigationProp } from '../../../navigation/types';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/types';
 import { CustomButton } from '../../../shared/components/Button/CustomButton';
 import { theme } from '../../../theme/theme';
 import { useAuth } from '../../../hooks/useAuth';
 import { Picker } from '@react-native-picker/picker';
 import { User } from '../../../types';
 
+type SignUpScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 export const SignUpScreen: React.FC = () => {
-  const navigation = useNavigation<AuthNavigationProp>();
+  const navigation = useNavigation<SignUpScreenNavigationProp>();
   const { register } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,13 +28,22 @@ export const SignUpScreen: React.FC = () => {
         displayName,
         role
       });
-      navigation.navigate('SignIn');
+      
+      // Navigate based on role
+      if (role === 'admin') {
+        navigation.navigate('Admin');
+      } else if (role === 'provider') {
+        navigation.navigate('Provider');
+      } else {
+        navigation.navigate('Client');
+      }
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Registration failed');
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <ScreenWrapper>
@@ -86,8 +98,8 @@ export const SignUpScreen: React.FC = () => {
 
         <View style={styles.footerContainer}>
           <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
-            <Text style={styles.footerLink}>Sign In</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Auth', { screen: 'SignIn' })}>
+          <Text style={styles.footerLink}>Sign In</Text>
           </TouchableOpacity>
         </View>
       </View>

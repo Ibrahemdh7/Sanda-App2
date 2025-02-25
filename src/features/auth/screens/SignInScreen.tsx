@@ -2,27 +2,39 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, TextStyle, Alert } from 'react-native';
 import { ScreenWrapper } from '../../../shared/components/layouts/ScreenWrapper';
 import { useNavigation } from '@react-navigation/native';
-import { AuthNavigationProp } from '../../../navigation/types';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../../navigation/types';
 import { CustomButton } from '../../../shared/components/Button/CustomButton';
 import { theme } from '../../../theme/theme';
 import { useAuth } from '../../../hooks/useAuth';
 
 export const SignInScreen: React.FC = () => {
-  const navigation = useNavigation<AuthNavigationProp>();
-  const { login } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { login, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
   const handleSignIn = async () => {
     try {
       setIsLoading(true);
       await login(email, password);
+      
+      // Navigate based on the user role
+      if (user?.role === 'admin') {
+        navigation.navigate('Admin');
+      } else if (user?.role === 'provider') {
+        navigation.navigate('Provider');
+      } else if (user?.role === 'client') {
+        navigation.navigate('Client');
+      }
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Sign in failed');
     } finally {
       setIsLoading(false);
     }
   };
+  
   return (
     <ScreenWrapper>
       <View style={styles.container}>
@@ -49,7 +61,7 @@ export const SignInScreen: React.FC = () => {
           />
           
           <TouchableOpacity 
-            onPress={() => navigation.navigate('ForgotPassword')}
+            onPress={() => navigation.navigate('Auth', { screen: 'ForgotPassword' })}
             style={styles.forgotPassword}
           >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
@@ -59,12 +71,21 @@ export const SignInScreen: React.FC = () => {
             title="Sign In" 
             onPress={handleSignIn}
             variant="primary"
+            loading={isLoading}
           />
+          
+          <View style={styles.demoUsers}>
+            <Text style={styles.demoTitle}>Demo Users:</Text>
+            <Text style={styles.demoText}>Admin: admin@sanad.com</Text>
+            <Text style={styles.demoText}>Provider: provider@sanad.com</Text>
+            <Text style={styles.demoText}>Client: client@sanad.com</Text>
+            <Text style={styles.demoText}>(Any password will work)</Text>
+          </View>
         </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+          <TouchableOpacity onPress={() => navigation.navigate('Auth', { screen: 'SignUp' })}>
             <Text style={styles.footerLink}>Sign Up</Text>
           </TouchableOpacity>
         </View>
@@ -83,12 +104,13 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xl
   },
   title: {
-    ...theme.typography.h1,
+    fontSize: 28,
+    fontWeight: 'bold',
     color: theme.colors.text,
     marginBottom: theme.spacing.sm
   },
   subtitle: {
-    ...theme.typography.body,
+    fontSize: 16,
     color: theme.colors.textSecondary
   },
   form: {
@@ -106,7 +128,21 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     color: theme.colors.primary,
-    ...theme.typography.body
+    fontSize: 14
+  },
+  demoUsers: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8
+  },
+  demoTitle: {
+    fontWeight: 'bold',
+    marginBottom: 5
+  },
+  demoText: {
+    fontSize: 12,
+    color: '#666'
   },
   footer: {
     flexDirection: 'row',
