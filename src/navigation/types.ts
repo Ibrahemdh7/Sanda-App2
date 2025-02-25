@@ -1,0 +1,55 @@
+import { NavigatorScreenParams } from '@react-navigation/native';
+
+// Auth Stack Types
+export type AuthStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  ForgotPassword: undefined;
+};
+
+// Admin Stack Types
+export type AdminStackParamList = {
+  AdminDashboard: undefined;
+  UserManagement: undefined;
+  SystemSettings: undefined;
+  Reports: undefined;
+};
+
+// Provider Stack Types
+export type ProviderStackParamList = {
+  ProviderDashboard: undefined;
+  Clients: undefined;
+  Invoices: undefined;
+  CreditAccounts: undefined;
+  Payments: undefined;
+};
+
+// Client Stack Types
+export type ClientStackParamList = {
+  ClientDashboard: undefined;
+  MyInvoices: undefined;
+  MyCreditAccount: undefined;
+  MyPayments: undefined;
+};
+
+// Shared Stack Types
+export type SharedStackParamList = {
+  Profile: undefined;
+  Notifications: undefined;
+  Settings: undefined;
+};
+
+// Root Stack Types
+export type RootStackParamList = {
+  Auth: NavigatorScreenParams<AuthStackParamList>;
+  Admin: NavigatorScreenParams<AdminStackParamList>;
+  Provider: NavigatorScreenParams<ProviderStackParamList>;
+  Client: NavigatorScreenParams<ClientStackParamList>;
+  Shared: NavigatorScreenParams<SharedStackParamList>;
+};
+
+declare global {
+  namespace ReactNavigation {
+    interface RootParamList extends RootStackParamList {}
+  }
+}
