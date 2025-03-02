@@ -1,14 +1,8 @@
 import { Timestamp, FieldValue } from 'firebase/firestore';
 
-// Update the timestamp types to accept both Timestamp and FieldValue
-type TimestampType = Timestamp | FieldValue;
+export type TimestampType = Timestamp | FieldValue;
 
-export interface BaseModel {
-  created_at: TimestampType;
-  updated_at: TimestampType;
-}
-
-export interface Provider extends BaseModel {
+export interface Provider {
   provider_id: string;
   user_id: string;
   company_name: string;
@@ -18,9 +12,11 @@ export interface Provider extends BaseModel {
     email: string;
     address: string;
   };
+  created_at: TimestampType;
+  updated_at: TimestampType;
 }
 
-export interface Client extends BaseModel {
+export interface Client {
   client_id: string;
   provider_id: string;
   user_id: string;
@@ -32,9 +28,11 @@ export interface Client extends BaseModel {
   };
   credit_limit: number;
   account_status: 'active' | 'suspended' | 'closed';
+  created_at: TimestampType;
+  updated_at: TimestampType;
 }
 
-export interface Invoice extends BaseModel {
+export interface Invoice {
   invoice_id: string;
   client_id: string;
   provider_id: string;
@@ -43,6 +41,8 @@ export interface Invoice extends BaseModel {
   total_amount: number;
   status: 'pending' | 'paid' | 'overdue' | 'cancelled';
   items: InvoiceItem[];
+  created_at: TimestampType;
+  updated_at: TimestampType;
 }
 
 export interface InvoiceItem {
@@ -53,16 +53,13 @@ export interface InvoiceItem {
   total: number;
 }
 
-
-export type TimeStampOrField = Timestamp | FieldValue;
-
 export interface Payment {
   payment_id: string;
   invoice_id: string;
-  payment_date: TimeStampOrField;
+  payment_date: TimestampType;
   amount: number;
   payment_method: 'bank_transfer' | 'credit_card' | 'cash';
   receipt_url?: string;
-  created_at: TimeStampOrField;
-  updated_at: TimeStampOrField;
+  created_at: TimestampType;
+  updated_at: TimestampType;
 }

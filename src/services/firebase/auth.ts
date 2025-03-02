@@ -3,7 +3,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
-  User as FirebaseUser
+  User as FirebaseUser,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/config/firebase';
@@ -14,7 +15,7 @@ export const firebaseAuth = {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
+  
       // Create user document in Firestore
       await setDoc(doc(db, 'users', user.uid), {
         id: user.uid,
@@ -25,7 +26,7 @@ export const firebaseAuth = {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
-
+  
       return {
         id: user.uid,
         email: user.email!,
@@ -35,8 +36,22 @@ export const firebaseAuth = {
         createdAt: new Date(),
         updatedAt: new Date()
       };
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      // Handle specific Firebase Authentication errors
+      if (error.code === 'auth/email-already-in-use') {
+        throw new Error('This email is already registered');
+      } else if (error.code === 'auth/weak-password') {
+        throw new Error('Password is too weak. It should be at least 6 characters');
+      } else if (error.code === 'auth/invalid-email') {
+        throw new Error('Invalid email format');
+      } else if (error.code === 'auth/operation-not-allowed') {
+        throw new Error('Email/password accounts are not enabled. Please contact support.');
+      } else if (error.code === 'auth/network-request-failed') {
+        throw new Error('Network error. Please check your internet connection.');
+      } else {
+        // For any other errors
+        throw new Error(error.message || 'Registration failed');
+      }
     }
   },
 

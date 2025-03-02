@@ -1,6 +1,6 @@
 // src/features/provider/screens/DashboardScreen/index.tsx
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { ScreenWrapper } from '../../../../shared/components/layouts/ScreenWrapper';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,31 +8,151 @@ import { ProviderStackParamList } from '../../../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../hooks/useAuth';
 import { theme } from '../../../../theme/theme';
-
-// Dummy data for dashboard
-const dashboardData = {
-  stats: {
-    totalClients: 24,
-    pendingInvoices: 12,
-    totalRevenue: '$78,450',
-    activeCredit: '$35,250',
-  },
-  recentInvoices: [
-    { id: '1', client: 'ABC Corporation', amount: '$2,450', date: '2023-02-15', status: 'Paid' },
-    { id: '2', client: 'XYZ Company', amount: '$1,780', date: '2023-02-10', status: 'Pending' },
-    { id: '3', client: 'Global Enterprises', amount: '$3,200', date: '2023-02-05', status: 'Overdue' },
-    { id: '4', client: 'Smith & Co', amount: '$980', date: '2023-01-28', status: 'Paid' },
-  ],
-  creditRequests: [
-    { id: '1', client: 'ABC Corporation', currentLimit: '$15,000', requestedLimit: '$20,000', requestDate: '2023-02-14', status: 'Pending' },
-    { id: '2', client: 'Royal Industries', currentLimit: '$8,000', requestedLimit: '$12,000', requestDate: '2023-02-08', status: 'Pending' },
-  ]
-};
+import { collection, query, where, getDocs, getCountFromServer, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { db } from '../../../../config/firebase';
 
 export const ProviderDashboard = () => {
   const navigation = useNavigation<NativeStackNavigationProp<ProviderStackParamList>>();
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'invoices' | 'credits'>('overview');
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState({
+    stats: {
+      totalClients: 0,
+      pendingInvoices: 0,
+      totalRevenue: '$0',
+      activeCredit: '$0',
+    },
+    recentInvoices: [] as any[],
+    creditRequests: [] as any[]
+  });
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        
+        // Get provider ID
+        const providerId = user.id;
+        
+        // Get total clients count
+        const clientsQuery = query(
+          collection(db, 'clients'),
+          where('provider_id', '==', providerId)
+        );
+        const clientsSnapshot = await getDocs(clientsQuery);
+        const totalClients = clientsSnapshot.docs.length;
+        
+        // Get pending invoices count
+        const pendingInvoicesQuery = query(
+          collection(db, 'invoices'),
+          where('provider_id', '==', providerId),
+          where('status', '==', 'pending')
+        );
+        const pendingInvoicesSnapshot = await getDocs(pendingInvoicesQuery);
+        const pendingInvoices = pendingInvoicesSnapshot.docs.length;
+        
+        // Calculate total revenue from paid invoices
+        const paidInvoicesQuery = query(
+          collection(db, 'invoices'),
+          where('provider_id', '==', providerId),
+          where('status', '==', 'paid')
+        );
+        const paidInvoicesSnapshot = await getDocs(paidInvoicesQuery);
+        const totalRevenue = paidInvoicesSnapshot.docs.reduce(
+          (sum, doc) => sum + (doc.data().total_amount || 0), 
+          0
+        );
+        
+        // Calculate active credit
+        const activeCredit = clientsSnapshot.docs.reduce(
+          (sum, doc) => sum + (doc.data().credit_limit || 0), 
+          0
+        );
+        
+        // Get recent invoices
+        const recentInvoicesQuery = query(
+          collection(db, 'invoices'),
+          where('provider_id', '==', providerId),
+          orderBy('created_at', 'desc'),
+          limit(4)
+        );
+        const recentInvoicesSnapshot = await getDocs(recentInvoicesQuery);
+        
+        // Create a map of client IDs to client names
+        const clientsMap: {[key: string]: string} = {};
+        clientsSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          clientsMap[doc.id] = data.client_name || 'Unknown Client';
+        });
+        
+        // Format the recent invoices
+        const recentInvoices = recentInvoicesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const timestamp = data.invoice_date as Timestamp;
+          const date = timestamp ? new Date(timestamp.seconds * 1000).toISOString().split('T')[0] : 'Unknown date';
+          
+          return {
+            id: doc.id,
+            client: clientsMap[data.client_id] || 'Unknown Client',
+            amount: `$${(data.total_amount || 0).toFixed(2)}`,
+            date: date,
+            status: data.status ? data.status.charAt(0).toUpperCase() + data.status.slice(1) : 'Unknown'
+          };
+        });
+        
+        // Get pending credit requests
+        const creditRequestsQuery = query(
+          collection(db, 'creditLimitRequests'),
+          where('provider_id', '==', providerId),
+          where('status', '==', 'pending'),
+          orderBy('request_date', 'desc'),
+          limit(2)
+        );
+        const creditRequestsSnapshot = await getDocs(creditRequestsQuery);
+        
+        // Format the credit requests
+        const creditRequests = creditRequestsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const timestamp = data.request_date as Timestamp;
+          const date = timestamp ? new Date(timestamp.seconds * 1000).toISOString().split('T')[0] : 'Unknown date';
+          
+          return {
+            id: doc.id,
+            client: clientsMap[data.client_id] || 'Unknown Client',
+            currentLimit: `$${(data.current_limit || 0).toFixed(2)}`,
+            requestedLimit: `$${(data.requested_limit || 0).toFixed(2)}`,
+            requestDate: date,
+            status: 'Pending'
+          };
+        });
+        
+        // Update dashboard data
+        setDashboardData({
+          stats: {
+            totalClients,
+            pendingInvoices,
+            totalRevenue: `$${totalRevenue.toFixed(2)}`,
+            activeCredit: `$${activeCredit.toFixed(2)}`,
+          },
+          recentInvoices: recentInvoices.length > 0 ? recentInvoices : [
+            { id: '1', client: 'No invoices found', amount: '$0', date: '', status: '' }
+          ],
+          creditRequests: creditRequests.length > 0 ? creditRequests : [
+            { id: '1', client: 'No credit requests', currentLimit: '$0', requestedLimit: '$0', requestDate: '', status: '' }
+          ]
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, [user]);
 
   const handleLogout = async () => {
     await logout();
@@ -138,9 +258,11 @@ export const ProviderDashboard = () => {
         <View key={invoice.id} style={styles.invoiceCard}>
           <View style={styles.invoiceHeader}>
             <Text style={styles.invoiceClient}>{invoice.client}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(invoice.status)}20` }]}>
-              <Text style={{ color: getStatusColor(invoice.status) }}>{invoice.status}</Text>
-            </View>
+            {invoice.status && (
+              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(invoice.status)}20` }]}>
+                <Text style={{ color: getStatusColor(invoice.status) }}>{invoice.status}</Text>
+              </View>
+            )}
           </View>
           <View style={styles.invoiceDetails}>
             <View style={styles.invoiceDetail}>
@@ -177,9 +299,11 @@ export const ProviderDashboard = () => {
         <View key={request.id} style={styles.creditRequestCard}>
           <View style={styles.creditRequestHeader}>
             <Text style={styles.creditRequestClient}>{request.client}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: '#FF950020' }]}>
-              <Text style={{ color: '#FF9500' }}>{request.status}</Text>
-            </View>
+            {request.status && (
+              <View style={[styles.statusBadge, { backgroundColor: '#FF950020' }]}>
+                <Text style={{ color: '#FF9500' }}>{request.status}</Text>
+              </View>
+            )}
           </View>
           <View style={styles.creditDetails}>
             <View style={styles.creditDetail}>
@@ -195,14 +319,16 @@ export const ProviderDashboard = () => {
               <Text style={styles.detailValue}>{request.requestDate}</Text>
             </View>
           </View>
-          <View style={styles.creditActions}>
-            <TouchableOpacity style={[styles.creditAction, styles.approveButton]}>
-              <Text style={styles.approveButtonText}>Approve</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.creditAction, styles.rejectButton]}>
-              <Text style={styles.rejectButtonText}>Reject</Text>
-            </TouchableOpacity>
-          </View>
+          {request.status === 'Pending' && (
+            <View style={styles.creditActions}>
+              <TouchableOpacity style={[styles.creditAction, styles.approveButton]}>
+                <Text style={styles.approveButtonText}>Approve</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.creditAction, styles.rejectButton]}>
+                <Text style={styles.rejectButtonText}>Reject</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       ))}
     </View>
@@ -290,9 +416,18 @@ export const ProviderDashboard = () => {
           </View>
 
           {/* Tab Content */}
-          {activeTab === 'overview' && renderOverviewTab()}
-          {activeTab === 'invoices' && renderInvoicesTab()}
-          {activeTab === 'credits' && renderCreditsTab()}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <Text style={styles.loadingText}>Loading dashboard data...</Text>
+            </View>
+          ) : (
+            <>
+              {activeTab === 'overview' && renderOverviewTab()}
+              {activeTab === 'invoices' && renderInvoicesTab()}
+              {activeTab === 'credits' && renderCreditsTab()}
+            </>
+          )}
         </View>
       </ScrollView>
     </ScreenWrapper>
@@ -559,5 +694,15 @@ const styles = StyleSheet.create({
   rejectButtonText: {
     color: '#FF3B30',
     fontWeight: '600',
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: theme.colors.textSecondary,
   },
 });

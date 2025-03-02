@@ -7,7 +7,6 @@ import {
   query,
   where,
   updateDoc,
-  deleteDoc,
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
@@ -27,21 +26,28 @@ export const clientService = {
     return client;
   },
 
-  getById: async (clientId: string) => {
-    const docRef = doc(db, 'clients', clientId);
-    const docSnap = await getDoc(docRef);
+  getByUserId: async (userId: string) => {
+    const q = query(collection(db, 'clients'), where('user_id', '==', userId));
+    const querySnapshot = await getDocs(q);
     
-    if (!docSnap.exists()) {
-      throw new Error('Client not found');
+    if (querySnapshot.empty) {
+      throw new Error('Client not found for this user');
     }
     
-    return docSnap.data() as Client;
+    const doc = querySnapshot.docs[0];
+    return {
+      ...doc.data(),
+      client_id: doc.id
+    } as Client;
   },
 
   getByProviderId: async (providerId: string) => {
     const q = query(collection(db, 'clients'), where('provider_id', '==', providerId));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as Client);
+    return querySnapshot.docs.map(doc => ({
+      ...doc.data(),
+      client_id: doc.id
+    })) as Client[];
   },
 
   update: async (clientId: string, updates: Partial<Client>) => {
@@ -50,9 +56,5 @@ export const clientService = {
       ...updates,
       updated_at: serverTimestamp()
     });
-  },
-
-  delete: async (clientId: string) => {
-    await deleteDoc(doc(db, 'clients', clientId));
   }
 };

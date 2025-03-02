@@ -1,57 +1,36 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { clientService } from '@/services/firebase/clients';
-import { Client } from '@/types/firebase';
 import { useAuth } from './useAuth';
+import { Client } from '@/types/firebase';
 
-export const useClients = () => {
-  const [loading, setLoading] = useState(false);
+export const useClients = (providerId?: string) => {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const getClientsByProvider = useCallback(async (providerId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      return await clientService.getByProviderId(providerId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch clients');
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        setLoading(true);
+        const id = providerId || user?.id;
+        
+        if (!id) {
+          throw new Error('Provider ID is required');
+        }
+        
+        const data = await clientService.getByProviderId(id);
+        setClients(data);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch clients';
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const createClient = useCallback(async (clientData: Omit<Client, 'client_id' | 'created_at' | 'updated_at'>) => {
-    try {
-      setLoading(true);
-      setError(null);
-      return await clientService.create(clientData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create client');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    fetchClients();
+  }, [providerId, user]);
 
-  const updateClient = useCallback(async (clientId: string, updates: Partial<Client>) => {
-    try {
-      setLoading(true);
-      setError(null);
-      await clientService.update(clientId, updates);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update client');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  return {
-    loading,
-    error,
-    getClientsByProvider,
-    createClient,
-    updateClient
-  };
+  return { clients, loading, error };
 };

@@ -2,71 +2,52 @@ import React, { useState, useEffect } from 'react';
 import { AuthContext, AuthContextType } from './AuthContext';
 import { User } from '@/types';
 import { auth } from '@/config/firebase';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '@/navigation/types';
+import { onAuthStateChanged } from 'firebase/auth';
+import { firebaseAuth } from '@/services/firebase/auth';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
-  // For demo/presentation purposes only
-  const demoUsers = {
-    admin: {
-      id: 'admin-1',
-      email: 'admin@sanad.com',
-      role: 'admin',
-      displayName: 'Admin User',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    provider: {
-      id: 'provider-1',
-      email: 'provider@sanad.com',
-      role: 'provider',
-      displayName: 'Provider User',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    client: {
-      id: 'client-1', 
-      email: 'client@sanad.com',
-      role: 'client',
-      displayName: 'Client User',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  };
+
+  
+  // Firebase auth state listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+      if (firebaseUser) {
+        // Get the user data from Firestore
+        try {
+          const userData = await firebaseAuth.getCurrentUser();
+          setUser(userData);
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error("Error getting user data:", error);
+          setError("Failed to load user data");
+        }
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+      setLoading(false);
+    });
+    
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, []);
 
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
       setError(null);
       
-      // For presentation - detect which type of user based on email
-      if (email === 'admin@sanad.com') {
-        setUser(demoUsers.admin as User);
-        setIsAuthenticated(true);
-      } else if (email === 'provider@sanad.com') {
-        setUser(demoUsers.provider as User);
-        setIsAuthenticated(true);
-      } else if (email === 'client@sanad.com') {
-        setUser(demoUsers.client as User);
-        setIsAuthenticated(true);
-      } else {
-        // Default to client for any email
-        const customUser = {
-          ...demoUsers.client,
-          email: email,
-          displayName: email.split('@')[0] // Use part of email as name
-        };
-        setUser(customUser as User);
-        setIsAuthenticated(true);
-      }
+      await firebaseAuth.login(email, password);
+      // Auth state listener will handle setting the user
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -78,19 +59,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       setError(null);
       
-      // Create a new demo user
-      const newUser = {
-        id: `${userData.role}-${Date.now()}`,
-        email: email,
-        role: userData.role || 'client',
-        displayName: userData.displayName || email.split('@')[0],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      setUser(newUser as User);
-      setIsAuthenticated(true);
+      await firebaseAuth.register(email, password, userData);
+      // Auth state listener will handle setting the user
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+      setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -100,11 +73,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       setLoading(true);
-      setUser(null);
-      setIsAuthenticated(false);
-      setError(null);
+      await firebaseAuth.logout();
+      // Auth state listener will handle clearing the user
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Logout failed');
+      const errorMessage = err instanceof Error ? err.message : 'Logout failed';
+      setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
@@ -114,11 +87,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = async (email: string) => {
     try {
       setLoading(true);
-      // Just pretend we sent an email
       setError(null);
-      alert(`Password reset email sent to ${email}`);
+      await firebaseAuth.resetPassword(email);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Password reset failed');
+      const errorMessage = err instanceof Error ? err.message : 'Password reset failed';
+      setError(errorMessage);
       throw err;
     } finally {
       setLoading(false);

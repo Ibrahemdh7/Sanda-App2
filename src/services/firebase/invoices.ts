@@ -7,23 +7,20 @@ import {
   query,
   where,
   updateDoc,
-  deleteDoc,
-  serverTimestamp,
   orderBy,
-  Timestamp
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { Invoice } from '@/types/firebase';
 
 export const invoiceService = {
   create: async (invoiceData: Omit<Invoice, 'invoice_id' | 'created_at' | 'updated_at'>) => {
-    const now = serverTimestamp();
     const invoiceRef = doc(collection(db, 'invoices'));
     const invoice: Invoice = {
       ...invoiceData,
       invoice_id: invoiceRef.id,
-      created_at: now,
-      updated_at: now
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp()
     };
     
     await setDoc(invoiceRef, invoice);
@@ -48,7 +45,10 @@ export const invoiceService = {
       orderBy('created_at', 'desc')
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as Invoice);
+    return querySnapshot.docs.map(doc => ({
+      ...doc.data(),
+      invoice_id: doc.id
+    })) as Invoice[];
   },
 
   getByProviderId: async (providerId: string) => {
@@ -58,18 +58,17 @@ export const invoiceService = {
       orderBy('created_at', 'desc')
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as Invoice);
+    return querySnapshot.docs.map(doc => ({
+      ...doc.data(),
+      invoice_id: doc.id
+    })) as Invoice[];
   },
 
-  update: async (invoiceId: string, updates: Partial<Invoice>) => {
+  updateStatus: async (invoiceId: string, status: Invoice['status']) => {
     const docRef = doc(db, 'invoices', invoiceId);
     await updateDoc(docRef, {
-      ...updates,
+      status,
       updated_at: serverTimestamp()
     });
-  },
-
-  delete: async (invoiceId: string) => {
-    await deleteDoc(doc(db, 'invoices', invoiceId));
   }
 };
