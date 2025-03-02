@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -9,7 +9,8 @@ import {
   Image, 
   KeyboardAvoidingView, 
   Platform, 
-  ActivityIndicator 
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { ScreenWrapper } from '../../../shared/components/layouts/ScreenWrapper';
 import { useNavigation } from '@react-navigation/native';
@@ -22,43 +23,99 @@ import { Ionicons } from '@expo/vector-icons';
 
 export const SignInScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { login } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [secureTextEntry, setSecureTextEntry] = useState(true);
   
-  const handleSignIn = async () => {
-    // Validate inputs
+  // Auto-navigate when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      console.log('User authenticated, navigating to appropriate stack. Role:', user.role);
+      
+      // Navigate to the appropriate stack based on user role
+      switch (user.role) {
+        case 'admin':
+          navigation.reset({ index: 0, routes: [{ name: 'Admin' }] });
+          break;
+        case 'provider':
+          navigation.reset({ index: 0, routes: [{ name: 'Provider' }] });
+          break;
+        case 'client':
+          navigation.reset({ index: 0, routes: [{ name: 'Client' }] });
+          break;
+        default:
+          console.warn('Unknown user role:', user.role);
+      }
+    }
+  }, [isAuthenticated, user, navigation]);
+  
+  const validateInputs = (): boolean => {
+    // Reset previous errors
+    setError(null);
+    
+    // Validate email
     if (!email.trim()) {
       setError('Please enter your email');
-      return;
+      return false;
     }
     
-    if (!password) {
-      setError('Please enter your password');
-      return;
-    }
-    
-    // Check email format with a regex
+    // Check email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('Please enter a valid email address');
+      return false;
+    }
+    
+    // Validate password
+    if (!password) {
+      setError('Please enter your password');
+      return false;
+    }
+    
+    return true;
+  };
+  
+  const handleSignIn = async () => {
+    if (!validateInputs()) {
       return;
     }
     
     try {
+      console.log('Starting login process for:', email);
       setIsLoading(true);
       setError(null);
+      
       await login(email, password);
-      // Auth state listener will handle navigation
+      console.log('Login successful');
+      
+      // Navigation is handled by the useEffect hook above
     } catch (err) {
+      console.error('Login error in SignInScreen:', err);
       const errorMessage = err instanceof Error ? err.message : 'Sign in failed';
       setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Show a specific message for demo accounts (only in development)
+  const renderDemoMessage = () => {
+    if (__DEV__) {
+      return (
+        <View style={styles.demoMessage}>
+          <Text style={styles.demoMessageText}>
+            <Text style={{ fontWeight: 'bold' }}>Demo accounts available:</Text>{'\n'}
+            Email: admin@sanad.com | Password: password123{'\n'}
+            Email: provider@sanad.com | Password: password123{'\n'}
+            Email: client@sanad.com | Password: password123
+          </Text>
+        </View>
+      );
+    }
+    return null;
   };
   
   return (
@@ -95,11 +152,12 @@ export const SignInScreen: React.FC = () => {
                   value={email}
                   onChangeText={(text) => {
                     setEmail(text);
-                    setError(null);
+                    if (error) setError(null);
                   }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   placeholderTextColor={theme.colors.textSecondary}
+                  testID="email-input"
                 />
               </View>
               
@@ -111,10 +169,11 @@ export const SignInScreen: React.FC = () => {
                   value={password}
                   onChangeText={(text) => {
                     setPassword(text);
-                    setError(null);
+                    if (error) setError(null);
                   }}
                   secureTextEntry={secureTextEntry}
                   placeholderTextColor={theme.colors.textSecondary}
+                  testID="password-input"
                 />
                 <TouchableOpacity 
                   onPress={() => setSecureTextEntry(!secureTextEntry)}
@@ -150,47 +209,7 @@ export const SignInScreen: React.FC = () => {
                 style={styles.signInButton}
               />
               
-              <View style={styles.orContainer}>
-                <View style={styles.divider} />
-                <Text style={styles.orText}>OR</Text>
-                <View style={styles.divider} />
-              </View>
-              
-              <View style={styles.demoUsersContainer}>
-                <Text style={styles.demoTitle}>Demo Accounts:</Text>
-                <TouchableOpacity 
-                  style={styles.demoUserButton}
-                  onPress={() => {
-                    setEmail('admin@sanad.com');
-                    setPassword('password123');
-                  }}
-                >
-                  <Ionicons name="person-outline" size={16} color={theme.colors.primary} />
-                  <Text style={styles.demoUserText}>Admin</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.demoUserButton}
-                  onPress={() => {
-                    setEmail('provider@sanad.com');
-                    setPassword('password123');
-                  }}
-                >
-                  <Ionicons name="business-outline" size={16} color={theme.colors.primary} />
-                  <Text style={styles.demoUserText}>Provider</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.demoUserButton}
-                  onPress={() => {
-                    setEmail('client@sanad.com');
-                    setPassword('password123');
-                  }}
-                >
-                  <Ionicons name="people-outline" size={16} color={theme.colors.primary} />
-                  <Text style={styles.demoUserText}>Client</Text>
-                </TouchableOpacity>
-              </View>
+              {renderDemoMessage()}
             </View>
 
             <View style={styles.footer}>
@@ -292,44 +311,18 @@ const styles = StyleSheet.create({
   signInButton: {
     marginTop: theme.spacing.md,
   },
-  orContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: theme.spacing.lg,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  orText: {
-    paddingHorizontal: 10,
-    color: theme.colors.textSecondary,
-    fontSize: 14,
-  },
-  demoUsersContainer: {
+  demoMessage: {
+    marginTop: theme.spacing.lg,
     backgroundColor: '#F8F9FA',
-    borderRadius: theme.borderRadius.md,
     padding: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
+    borderRadius: theme.borderRadius.md,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.primary,
   },
-  demoTitle: {
-    fontWeight: 'bold',
-    marginBottom: 8,
+  demoMessageText: {
+    fontSize: 12,
+    lineHeight: 18,
     color: theme.colors.textSecondary,
-    fontSize: 14,
-  },
-  demoUserButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EFEFEF',
-  },
-  demoUserText: {
-    color: theme.colors.primary,
-    marginLeft: 8,
-    fontSize: 14,
   },
   footer: {
     flexDirection: 'row',

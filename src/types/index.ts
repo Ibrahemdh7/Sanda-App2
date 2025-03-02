@@ -4,7 +4,8 @@ export interface User {
   email: string;
   role: 'admin' | 'provider' | 'client';
   displayName: string;
-  phoneNumber?: string;
+  phoneNumber: string;
+  company?: string; // Add optional company field
   createdAt: Date;
   updatedAt: Date;
 }

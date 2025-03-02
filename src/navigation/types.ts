@@ -25,17 +25,19 @@ export type AdminStackParamList = {
 export type ProviderStackParamList = {
   ProviderDashboard: undefined;
   Clients: undefined;
-  Invoices: undefined;
+  Invoices: { action?: 'create'; selectedInvoiceId?: string } | undefined;
   CreditAccounts: undefined;
   Payments: undefined;
+  // Add other screens if needed
 };
 
 // Client Stack Types
 export type ClientStackParamList = {
   ClientDashboard: undefined;
-  MyInvoices: undefined;
+  MyInvoices: { selectedInvoiceId?: string } | undefined;
   MyCreditAccount: undefined;
   MyPayments: undefined;
+  Welcome: undefined;
 };
 
 // Shared Stack Types

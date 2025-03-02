@@ -9,7 +9,7 @@ import { ProviderStack } from './src/navigation/ProviderStack';
 import { AdminStack } from './src/navigation/AdminStack';
 import { ClientStack } from './src/navigation/ClientStack';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text } from 'react-native';
 import { theme } from './src/theme/theme';
 import { AuthProvider } from './src/context/auth/AuthProvider';
 import { useAuth } from './src/hooks/useAuth';
@@ -18,17 +18,19 @@ import { WelcomeScreen } from './src/features/auth/screens/WelcomeScreen';
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 function AppContent() {
-  const { isAuthenticated, user, loading } = useAuth();
+  const { isAuthenticated, user, loading, initialLoading } = useAuth();
   
-  if (loading) {
+  // Show loading indicator during initial authentication check
+  if (initialLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
         <StatusBar style="auto" />
         <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={{ marginTop: 16, color: theme.colors.textSecondary }}>Initializing app...</Text>
       </View>
     );
   }
-
+  
   return (
     <NavigationContainer
       theme={{
@@ -47,20 +49,42 @@ function AppContent() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: theme.colors.background },
+          animation: 'fade',
         }}
-        initialRouteName="Welcome"
+        initialRouteName="Welcome" // Add this line to ensure Welcome is the initial screen
       >
-        <RootStack.Screen name="Welcome" component={WelcomeScreen} />
-        <RootStack.Screen name="Auth" component={AuthStack} />
-        <RootStack.Screen name="Admin" component={AdminStack} />
-        <RootStack.Screen name="Provider" component={ProviderStack} />
-        <RootStack.Screen name="Client" component={ClientStack} />
+        {!isAuthenticated ? (
+          // Not authenticated - show Welcome and Auth screens
+          <>
+            <RootStack.Screen 
+              name="Welcome" 
+              component={WelcomeScreen} 
+              options={{ gestureEnabled: false }} // Prevent going back
+            />
+            <RootStack.Screen name="Auth" component={AuthStack} />
+          </>
+        ) : (
+          // Authenticated - show appropriate stack based on user role
+          <>
+            {user?.role === 'admin' && (
+              <RootStack.Screen name="Admin" component={AdminStack} />
+            )}
+            {user?.role === 'provider' && (
+              <RootStack.Screen name="Provider" component={ProviderStack} />
+            )}
+            {user?.role === 'client' && (
+              <RootStack.Screen name="Client" component={ClientStack} />
+            )}
+          </>
+        )}
       </RootStack.Navigator>
     </NavigationContainer>
   );
 }
 
 function App() {
+  console.log('App component rendering');
+  
   return (
     <SafeAreaProvider>
       <StatusBar style="auto" />
